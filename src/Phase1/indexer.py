@@ -1,13 +1,9 @@
 import re, os, sys
 import xml.sax
 from xml.sax import parse, ContentHandler
-import spacy
 import timeit
 import xml.sax
-#from nltk.stem.snowball import SnowballStemmer
 from collections import defaultdict
-
-#stemmer = SnowballStemmer("english")
 
 stop_words = set()
 inverted_index = defaultdict(lambda:defaultdict(lambda:defaultdict(int)))
@@ -30,14 +26,12 @@ regExp4 = re.compile(r'[-.,:;_?()"/\']', re.DOTALL)
 #RegEx to remove [[file:]]
 regExp5 = re.compile(r'\[\[file:(.*?)\]\]', re.DOTALL)
 #RegEx to remove Special Characters
-regExp6 = re.compile(r'[\'~` \n\"_!=@#$%-^*+{\[}\]\|\\<>/?]', re.DOTALL)
-
+regExp6 = re.compile(r'[~`!@#$%-^*+{\[}\]\|\\<>/?]', re.DOTALL)
 #RegEx to remove {{.*}} from text
-regExp9 = re.compile(r'{{(.*?)}}', re.DOTALL)
+regExp7 = re.compile(r'{{(.*?)}}', re.DOTALL)
 #RegEx to remove <..> from text
-regExp10 = re.compile(r'<(.*?)>' ,re.DOTALL)
-#RegEx to remove junk from text
-regExp11 = re.compile(r"[~`!@#$%-^*+{\[}\]\|\\<>/?]", re.DOTALL)
+regExp8 = re.compile(r'<(.*?)>' ,re.DOTALL)
+
 
 # Function t0 clean the text
 def cleanText(text):
@@ -47,14 +41,14 @@ def cleanText(text):
 		text = regExp3.sub('', text)
 		text = regExp4.sub('', text)
 		text = regExp5.sub('', text)
-		text = regExp10.sub('', text)
+		text = regExp8.sub('', text)
 	except:
 		return text
 	return text
 
 def docMappingDump(doc_id, doc_title, doc_data):
 	doc_id = str(doc_id)
-	doc_title = str(doc_title.encode('utf-8'))
+	doc_title = str(doc_title)
 	#print(doc_id, doc_title)
 	try:
 		if doc_id_to_data is not None:
@@ -75,7 +69,7 @@ def dumpInvertedIndex(doc_id):
 		try:
 			if key == None or val == None:
 				continue
-			s = str(key.encode('utf-8')) + ":"
+			s = str(key) + ":"
 			if s == ":":
 				continue
 			for k,v in sorted(val.items()):
@@ -102,7 +96,7 @@ def dumpInvertedIndex(doc_id):
 	print(str(doc_id) + " Documents Processed...")
 
 	
-def insertIntoInvertedIndex(final_words, doc_id, t):
+def insertIntoInvertedIndex(final_words, doc_id, ch):
 	global inverted_index
 	for word in final_words:
 		try:
@@ -111,16 +105,22 @@ def insertIntoInvertedIndex(final_words, doc_id, t):
 				if word not in stop_words:
 					if word in inverted_index:
 						if doc_id in  inverted_index[word]:
-							if t in inverted_index[word][doc_id]:
-								inverted_index[word][doc_id][t] += 1
+							if ch in inverted_index[word][doc_id]:
+								inverted_index[word][doc_id][ch] += 1
 							else:
-								inverted_index[word][doc_id][t] = 1
+								inverted_index[word][doc_id][ch] = 1
 						else:
-							inverted_index[word][doc_id] = {t:1}
+							inverted_index[word][doc_id] = {ch:1}
 					else:
-						inverted_index[word] = dict({doc_id : {t:1}})
+						inverted_index[word] = dict({doc_id:{ch:1}})
 		except:
 			continue
+
+def cleanExtractedDict(extracted_dict, doc_id, field, ch):
+	text = ' '.join(extracted_dict[field])
+	text = regExp6.sub(' ', text)
+	extracted_dict[field] = text.split()
+	insertIntoInvertedIndex(extracted_dict[field], doc_id, ch)
 
 def cleanExtractedData(extracted_dict, doc_id):
 	for info_list in extracted_dict["InfoBox"]:
@@ -128,36 +128,24 @@ def cleanExtractedData(extracted_dict, doc_id):
 			token_list = []
 			token_list = re.findall(r'=(.?)\|', info_list, re.DOTALL)
 			token_list = ' '.join(token_list)
-			token_list = regExp11.sub(' ', token_list)
+			token_list = regExp6.sub(' ', token_list)
 			token_list = token_list.split()
 			insertIntoInvertedIndex(token_list, doc_id, "i")
 		except:
 			continue
 
-	if len(extracted_dict["Categories"]):
-		categories = ' '.join(extracted_dict["Categories"])
-		categories = regExp11.sub(' ', categories)
-		extracted_dict["Categories"] = categories.split()
-		insertIntoInvertedIndex(extracted_dict["Categories"], doc_id, "c")
-
 	if len(extracted_dict["Body"]):
-		body = ' '.join(extracted_dict["Body"])
-		body = regExp11.sub(' ', body)
-		extracted_dict["Body"] = body.split()
-		insertIntoInvertedIndex(extracted_dict["Body"], doc_id, "b")
-	
+		cleanExtractedDict(extracted_dict, doc_id, "Body", "b")
+
 	if len(extracted_dict["References"]):
-		references = ' '.join(extracted_dict["References"])
-		references = regExp11.sub(' ', references)
-		extracted_dict["References"] = references.split()
-		insertIntoInvertedIndex(extracted_dict["References"], doc_id, "r")
+		cleanExtractedDict(extracted_dict, doc_id, "References", "r")
+	
+	if len(extracted_dict["Categories"]):
+		cleanExtractedDict(extracted_dict, doc_id, "Categories", "c")
 	
 	if len(extracted_dict["Links"]):
-		links = ' '.join(extracted_dict["Links"])
-		links = regExp11.sub(' ', links)
-		extracted_dict["Links"] = links.split()
-		insertIntoInvertedIndex(extracted_dict["Links"], doc_id, "e")
-		
+		cleanExtractedDict(extracted_dict, doc_id, "Links", "e")
+	
 
 def processBuffer(doc_data, doc_id, is_title, is_text):
 	text = doc_data.lower()
@@ -169,7 +157,7 @@ def processBuffer(doc_data, doc_id, is_title, is_text):
 		for word in words:
 			try:
 				if word.isalpha() and word not in stop_words:
-					final_words.append(regExp11.sub(' ', word))
+					final_words.append(regExp6.sub(' ', word))
 			except:
 				continue
 		insertIntoInvertedIndex(final_words, doc_id, "t")
@@ -219,8 +207,6 @@ def processBuffer(doc_data, doc_id, is_title, is_text):
 		last_doc_id = doc_id
 		if doc_id % push_limit == 0:
 			dumpInvertedIndex(doc_id)
-		#if doc_id == 2:	
-		#	sys.exit(0)
 
 class WikiHandler(xml.sax.handler.ContentHandler):
 	def __init__(self):
@@ -263,7 +249,7 @@ class WikiHandler(xml.sax.handler.ContentHandler):
 			self.buffer = ""
 
 		elif tag == "id" and self.is_firstID:
-			docMappingDump(self.doc_id, self.doc_title, self.doc_data)
+			#docMappingDump(self.doc_id, self.doc_title, self.doc_data)
 			self.is_firstID = False
 			self.doc_data = ""
 
@@ -272,14 +258,13 @@ class WikiHandler(xml.sax.handler.ContentHandler):
 
 def parseXML(dump_path):
 	parser = xml.sax.make_parser()
-	#parser.setFeature(xml.sax.handler.feature_namespaces, 0)
 	handler = WikiHandler()
 	parser.setContentHandler(handler)
 	parser.parse(dump_path)
 
 def main():
 	if len(sys.argv) != 4:
-		print("Usage: python3 indexer.py sample.xml output_path invertedindex_stat.txt")
+		print("Usage: bash index.sh wiki_dump.xml output_path invertedindex_stat.txt")
 		sys.exit(0);
 
 	global index_path, stop_words, doc_id_to_data, invertedindex_stat
@@ -303,8 +288,6 @@ def main():
 	
 	print("Parsing Started...")
 	parseXML(dump_path)
-
-
 	dumpInvertedIndex(last_doc_id)
 
 
@@ -312,4 +295,6 @@ if __name__ == "__main__":
 	start = timeit.default_timer()
 	main()
 	stop = timeit.default_timer()
-	print(stop - start)
+	print(stop - start, "Seconds")
+	print((stop - start) / 60.0, "Minutes")
+	
