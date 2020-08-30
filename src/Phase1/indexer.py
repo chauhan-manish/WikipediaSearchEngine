@@ -21,30 +21,24 @@ tokens_in_index = 0
 #Stemmer object
 stemmer = SnowballStemmer("english")
 
-#RegEx to remove URLs, CSS, Punctuations
-regExp1 = re.compile(r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+', re.DOTALL)
-#RegEx to remove CSS
-regExp2 = re.compile(r'{\|(.*?)\|}', re.DOTALL)
-#RegEx to remove {{citr **}} or {{vcite **}}
-regExp3 = re.compile(r'{{v?cite(.*?)}}', re.DOTALL)
-#RegEx to remove Punctuations
-regExp4 = re.compile(r'[-.,:;_?()"/\']', re.DOTALL)
-#RegEx to remove [[file:]]
-regExp5 = re.compile(r'\[\[file:(.*?)\]\]', re.DOTALL)
-#RegEx to remove Special Characters
-regExp6 = re.compile(r'[~`!@#$%-^*+{\[}\]\|\\<>/?]', re.DOTALL)
-#RegEx to remove <..> from text
-regExp7 = re.compile(r'<(.*?)>' ,re.DOTALL)
+#RegEx to remove URLs, CSS, Punctuations, Special characters, Tags etc
+regExSpC = re.compile(r'[~`!@#$%-^*+{\[}\]\|\\<>/?]', re.DOTALL)
+regExCite = re.compile(r'{{v?cite(.*?)}}', re.DOTALL)
+regExFile = re.compile(r'\[\[file:(.*?)\]\]', re.DOTALL)
+regExURL = re.compile(r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+', re.DOTALL)
+regExTag = re.compile(r'<(.*?)>' ,re.DOTALL)
+regExPunc = re.compile(r'[-.,:;_?()"/\']', re.DOTALL)
+regExCSS = re.compile(r'{\|(.*?)\|}', re.DOTALL)
 
 # Function to clean the text
 def cleanText(text):
 	try:
-		text = regExp1.sub('', text)
-		text = regExp2.sub('', text)
-		text = regExp3.sub('', text)
-		text = regExp4.sub('', text)
-		text = regExp5.sub('', text)
-		text = regExp7.sub('', text)
+		text = regExURL.sub('', text)	# Remove URL
+		text = regExCSS.sub('', text)	# Remove CSS
+		text = regExCite.sub('', text)	# Remove cite
+		text = regExPunc.sub('', text)	# Remove Punctuations
+		text = regExFile.sub('', text)	# Remove file
+		text = regExTag.sub('', text)	# Remove <..> Tag
 	except:
 		return text
 	return text
@@ -116,7 +110,7 @@ def insertIntoInvertedIndex(final_words, doc_id, ch):
 
 def cleanExtractedDict(extracted_dict, doc_id, field, ch):
 	text = ' '.join(extracted_dict[field])
-	text = regExp6.sub(' ', text)
+	text = regExSpC.sub(' ', text)
 	extracted_dict[field] = text.split()
 	insertIntoInvertedIndex(extracted_dict[field], doc_id, ch)
 
@@ -126,7 +120,7 @@ def cleanExtractedData(extracted_dict, doc_id):
 			token_list = []
 			token_list = re.findall(r'=(.?)\|', info_list, re.DOTALL)
 			token_list = ' '.join(token_list)
-			token_list = regExp6.sub(' ', token_list)
+			token_list = regExSpC.sub(' ', token_list)
 			token_list = token_list.split()
 			insertIntoInvertedIndex(token_list, doc_id, "i")
 		except:
@@ -203,7 +197,7 @@ def processTitle(doc_data, doc_id):
 	for word in words:
 		try:
 			if word.isalpha() and word not in stop_words:
-				final_words.append(regExp6.sub(' ', word))
+				final_words.append(regExSpC.sub(' ', word))
 		except:
 			continue
 	insertIntoInvertedIndex(final_words, doc_id, "t")
