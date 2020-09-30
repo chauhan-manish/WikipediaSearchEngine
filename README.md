@@ -7,11 +7,10 @@
 
 # About Project
 
-# Built Search Engine Platform by creating Inverted Index on the Wikipedia Data Dump of size 45 GB.
+Built Search Engine Platform by creating Inverted Index on the Wikipedia Data Dump of size 45 GB.
 
 # Following Steps Follows to create Inverted Indexing
 
-    Parsing using etree : Need to parse each page , title tag, infobox, body , category etc..
     Tokenization : Tokenize sentense to get each token using regular expression
     Case Folding : make it all to lowercase
     Stop Words Removal : remove stop word which are more frequently occured in a sentences
@@ -21,7 +20,7 @@
 
 # Features
 
-    support field query like title:abc body:aaa infobox:zyx
+    support field query like title, infobox, references, external links, body
     showing only top k relevent search result
     Response time is nearly 3-4 second
 
