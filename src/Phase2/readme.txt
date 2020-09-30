@@ -1,8 +1,3 @@
-Index Creation files:
-1. indexer.py
-
-All the stats that are mentioned are run on 20 files
-
 Posting List are fromed in this way:
 eg:
 
