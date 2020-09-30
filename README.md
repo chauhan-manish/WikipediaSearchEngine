@@ -4,13 +4,15 @@
     Python3
     Porter stemmer
     stop words list
+    XML SAX Parser
 
 # About Project
 
 Built Search Engine Platform by creating Inverted Index on the Wikipedia Data Dump of size 45 GB.
 
 # Following Steps Follows to create Inverted Indexing
-
+    
+    Parsing using XML SAX Parser
     Tokenization : Tokenize sentense to get each token using regular expression
     Case Folding : make it all to lowercase
     Stop Words Removal : remove stop word which are more frequently occured in a sentences
